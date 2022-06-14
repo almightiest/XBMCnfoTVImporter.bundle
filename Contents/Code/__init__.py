@@ -17,9 +17,149 @@ import urllib
 import urlparse
 import hashlib
 
-PERCENT_RATINGS = {
-    'rottentomatoes','rotten tomatoes','rt','flixster'
+
+RATINGS = {
+    'imdb': {
+        'type': 'audience',
+        'display': 'float',
+        'image_good': 'imdb://image.rating',
+        'image_bad': 'imdb://image.rating',
+        'score_good': 6.0,
+        'append_text_to_score': '',
+        'process_votes': True,
+        'eval': 'round(float(%f), 1)',
+        'post_process': 'round_1',  # workaround for eval not working in Plex plugin scripts
+    },
+    'metacritic': {
+        'type': 'critic',
+        'display': 'percent',
+        'image_good': 'rottentomatoes://image.rating.ripe',  # none exist for Metacritic, so use RT
+        'image_bad': 'rottentomatoes://image.rating.rotten',
+        'score_good': 6.0,  # base10
+        'append_text_to_score': '',
+        'process_votes': False,  # OMDb doesn't provide votes
+        'eval': 'int(round(float(%f), 1)*10)',
+        'post_process': 'int_times_10',  # workaround for eval not working in Plex plugin scripts
+    },
+    'tomatometerallcritics': {
+        'type': 'critic',
+        'display': 'percent',
+        'image_good': 'rottentomatoes://image.rating.ripe',
+        'image_bad': 'rottentomatoes://image.rating.rotten',
+        'score_good': 6.0,  # base 10
+        'append_text_to_score': '%',
+        'process_votes': False,  # OMDb doesn't provide votes
+        'eval': 'int(round(float(%f), 1)*10)',
+        'post_process': 'int_times_10',  # workaround for eval not working in Plex plugin scripts
+    },
+    'tomatometerallaudience': {
+        'type': 'audience',
+        'display': 'percent',
+        'image_good': 'rottentomatoes://image.rating.upright',
+        'image_bad': 'rottentomatoes://image.rating.spilled',
+        'score_good': 6.0,  # base10
+        'append_text_to_score': '%',
+        'process_votes': False,  # OMDb doesn't provide votes
+        'eval': 'int(round(float(%f), 1)*10)',
+        'post_process': 'int_times_10',  # workaround for eval not working in Plex plugin scripts
+    },
+    'themoviedb': {
+        'type': 'audience',
+        'display': 'float',
+        'image_good': 'themoviedb://image.rating',
+        'image_bad': 'themoviedb://image.rating',
+        'score_good': 6.0,
+        'append_text_to_score': '',
+        'process_votes': True,
+        'eval': 'round(float(%f), 1)',
+        'post_process': 'round_1',  # workaround for eval not working in Plex plugin scripts
+    },
+    'trakt': {
+        'type': 'audience',
+        'display': 'float',
+        'image_good': '',
+        'image_bad': '',
+        'score_good': 6.0,
+        'append_text_to_score': '%',
+        'process_votes': True,
+        'eval': 'int(round(float(%f), 1)*10)',
+        'post_process': 'int_times_10',  # workaround for eval not working in Plex plugin scripts
+    }
+
 }
+
+DEFAULT_RATING_IMAGE = "imdb://image.rating"RATINGS = {
+    'imdb': {
+        'type': 'audience',
+        'display': 'float',
+        'image_good': 'imdb://image.rating',
+        'image_bad': 'imdb://image.rating',
+        'score_good': 6.0,
+        'append_text_to_score': '',
+        'process_votes': True,
+        'eval': 'round(float(%f), 1)',
+        'post_process': 'round_1',  # workaround for eval not working in Plex plugin scripts
+    },
+    'metacritic': {
+        'type': 'critic',
+        'display': 'percent',
+        'image_good': 'rottentomatoes://image.rating.ripe',  # none exist for Metacritic, so use RT
+        'image_bad': 'rottentomatoes://image.rating.rotten',
+        'score_good': 6.0,  # base10
+        'append_text_to_score': '',
+        'process_votes': False,  # OMDb doesn't provide votes
+        'eval': 'int(round(float(%f), 1)*10)',
+        'post_process': 'int_times_10',  # workaround for eval not working in Plex plugin scripts
+    },
+    'tomatometerallcritics': {
+        'type': 'critic',
+        'display': 'percent',
+        'image_good': 'rottentomatoes://image.rating.ripe',
+        'image_bad': 'rottentomatoes://image.rating.rotten',
+        'score_good': 6.0,  # base 10
+        'append_text_to_score': '%',
+        'process_votes': False,  # OMDb doesn't provide votes
+        'eval': 'int(round(float(%f), 1)*10)',
+        'post_process': 'int_times_10',  # workaround for eval not working in Plex plugin scripts
+    },
+    'tomatometerallaudience': {
+        'type': 'audience',
+        'display': 'percent',
+        'image_good': 'rottentomatoes://image.rating.upright',
+        'image_bad': 'rottentomatoes://image.rating.spilled',
+        'score_good': 6.0,  # base10
+        'append_text_to_score': '%',
+        'process_votes': False,  # OMDb doesn't provide votes
+        'eval': 'int(round(float(%f), 1)*10)',
+        'post_process': 'int_times_10',  # workaround for eval not working in Plex plugin scripts
+    },
+    'themoviedb': {
+        'type': 'audience',
+        'display': 'float',
+        'image_good': 'themoviedb://image.rating',
+        'image_bad': 'themoviedb://image.rating',
+        'score_good': 6.0,
+        'append_text_to_score': '',
+        'process_votes': True,
+        'eval': 'round(float(%f), 1)',
+        'post_process': 'round_1',  # workaround for eval not working in Plex plugin scripts
+    },
+    'trakt': {
+        'type': 'audience',
+        'display': 'float',
+        'image_good': '',
+        'image_bad': '',
+        'score_good': 6.0,
+        'append_text_to_score': '%',
+        'process_votes': True,
+        'eval': 'int(round(float(%f), 1)*10)',
+        'post_process': 'int_times_10',  # workaround for eval not working in Plex plugin scripts
+    }
+
+}
+
+DEFAULT_RATING_IMAGE = "imdb://image.rating"
+
 
 class xbmcnfotv(Agent.TV_Shows):
     name = 'XBMCnfoTVImporter'
@@ -474,68 +614,159 @@ class xbmcnfotv(Agent.TV_Shows):
                 except:
                     pass
                 # Ratings
+                nfo_rating = None
                 try:
-                    nforating = round(float(nfoXML.xpath("rating")[0].text.replace(',', '.')),1)
-                    metadata.rating = nforating
-                    self.DLog("Series Rating found: " + str(nforating))
+                    nfo_rating = round(float(nfo_xml.xpath('rating')[0].text.replace(',', '.')), 1)
+                    log.debug('tvshow Rating found: ' + str(nfo_rating))
                 except:
-                    self.DLog("Can't read rating from tvshow.nfo.")
-                    self.DLog("Trying to get a rating of additional ratings from tvshow.nfo.")
+                    pass
+                if not nfo_rating:
+                    log.debug('Reading old rating style failed. Trying new Krypton style.')
+                    for ratings in nfo_xml.xpath('ratings'):
+                        try:
+                            rating = ratings.xpath('rating')[0]
+                            nfo_rating = round(float(rating.xpath('value')[0].text.replace(',', '.')), 1)
+                            log.debug('Krypton style tvshow rating found: {rating}'.format(rating=nfo_rating))
+                        except:
+                            log.debug('Can\'t read rating from .nfo.')
+                            nfo_rating = 0.0
+                            pass
+                if preferences['altratings']:
+                    log.debug('Searching for additional Ratings...')
+                    allowed_ratings = preferences['ratings']
+                    if not allowed_ratings:
+                        allowed_ratings = ''
+                    add_ratings_string = ''
+                    add_ratings = None
                     try:
-                        nforating = round(float(nfoXML.xpath("ratings")[0][0][0].text.replace(',', '.')),1)
-                        metadata.rating = nforating
-                        self.DLog("Found first rating in additional ratings: " + str(nforating))
+                        add_ratings = nfo_xml.xpath('ratings')
+                        log.debug('Trying to read additional ratings from .nfo.')
                     except:
-                        self.DLog("Can't read ratings from tvshow.nfo.")
-                        nforating = 0.0
+                        log.debug('Can\'t read additional ratings from .nfo.')
                         pass
-                if Prefs['altratings']:
-                    self.DLog("Searching for additional Ratings...")
-                    allowedratings = Prefs['ratings']
-                    if not allowedratings: allowedratings = ""
-                    addratingsstring = ""
-                    try:
-                        addratings = nfoXML.xpath('ratings')
-                        self.DLog("Trying to read additional ratings from tvshow.nfo.")
-                    except:
-                        self.DLog("Can't read additional ratings from tvshow.nfo.")
-                        pass
-                    if addratings:
-                        for addratingXML in addratings:
-                            for addrating in addratingXML:
+                    if add_ratings:
+                        # keep tally of votes so we can choose the top voted rating
+                        audience_votes = -1
+                        critic_votes = -1
+
+                        # average out scores
+                        audience_score_total = 0.0
+                        audience_ratings_found = 0
+                        critic_score_total = 0.0
+                        critic_ratings_found = 0
+
+                        # track default='true' attribute
+                        audience_default_found = False
+                        critic_default_found = False
+
+                        for add_rating_xml in add_ratings:
+                            for add_rating in add_rating_xml:
+                                rating_provider = ""
+                                rating_value = ""
+                                rating_votes = ""
+
                                 try:
-                                    ratingprovider = str(addrating.attrib['moviedb'])
+                                    rating_provider = str(add_rating.attrib['moviedb'])
                                 except:
                                     try:
-                                        ratingprovider = str(addrating.attrib['name'])
-                                        addrating = addrating[0]
-                                    except:
-                                        pass
-                                        self.DLog("Skipping additional rating without provider attribute!")
+                                        rating_provider = str(add_rating.attrib['name'])
+                                        add_rating_value = float(add_rating.xpath('value')[0].text.replace(',', '.'))
+                                        add_votes = int(add_rating.xpath('votes')[0].text)
+
+                                        # check for default='true' rating and prefer that instead of averaging out the votes
+                                        try:
+                                            rating_default = (add_rating.attrib['default'].lower() == 'true')
+                                        except:
+                                            rating_default = False
+
+                                        # check for max attribute and convert to base10
+                                        try:
+                                            rating_max = int(add_rating.attrib['max'])
+                                            add_rating_value = float(add_rating_value / rating_max * 10)
+                                        except:
+                                            pass
+
+                                        if rating_provider in RATINGS:
+                                            rating_info = RATINGS[rating_provider]
+
+                                            if rating_info['post_process'] == "round_1":
+                                                add_rating_value = round(add_rating_value,
+                                                                         1)  # display score in plot as max=10.0
+                                                rating_value = str(add_rating_value)
+                                            elif rating_info[
+                                                'post_process'] == "int_times_10":  # display score in plot as max=100
+                                                add_rating_value = round(add_rating_value, 1)
+                                                rating_value = str(int(round(float(add_rating_value * 10), 0)))
+                                            else:
+                                                rating_value = str(add_rating_value)
+
+                                            if rating_info[
+                                                'type'] == 'critic' and add_votes > critic_votes and critic_default_found == False:
+                                                critic_ratings_found += 1
+                                                critic_score_total += add_rating_value
+
+                                                if rating_default == True:  # use default provider for rating
+                                                    critic_default_found = True
+                                                else:  # use average score for rating
+                                                    add_rating_value = round(
+                                                        float(critic_score_total / critic_ratings_found), 1)
+
+                                                if add_rating_value >= rating_info['score_good']:
+                                                    metadata.rating_image = rating_info['image_good']
+                                                else:
+                                                    metadata.rating_image = rating_info['image_bad']
+
+                                                metadata.rating = add_rating_value
+                                                metadata.rating_count = add_votes
+                                            elif rating_info['type'] == 'audience' and add_votes > audience_votes and audience_default_found == False:
+                                                audience_ratings_found += 1
+                                                audience_score_total += add_rating_value
+
+                                                if rating_default == True:  # use default provider for rating
+                                                    critic_default_found = True
+                                                else:  # use average score for rating
+                                                    add_rating_value = round(
+                                                        float(audience_score_total / audience_ratings_found), 1)
+
+                                                if add_rating_value >= rating_info['score_good']:
+                                                    metadata.audience_rating_image = rating_info['image_good']
+                                                else:
+                                                    metadata.audience_rating_image = rating_info['image_bad']
+
+                                                metadata.audience_rating = add_rating_value
+                                                metadata.rating_count = add_votes  # audience_rating_count doesn't exist
+
+                                            rating_value = rating_value + rating_info['append_text_to_score']
+
+                                            if rating_info['process_votes'] == True:
+                                                rating_votes = str('{:,}'.format(add_votes))
+                                    except Exception as e:
+                                        log.debug(e)
+                                        log.debug("Skipping additional rating without provider attribute!")
                                         continue
-                                ratingvalue = str(addrating.text.replace (',','.'))
-                                if ratingprovider.lower() in PERCENT_RATINGS:
-                                    ratingvalue = ratingvalue + "%"
-                                if ratingprovider in allowedratings or allowedratings == "":
-                                    self.DLog("adding rating: " + ratingprovider + ": " + ratingvalue)
-                                    addratingsstring = addratingsstring + " | " + ratingprovider + ": " + ratingvalue
-                            if addratingsstring != "":
-                                self.DLog("Putting additional ratings at the " + Prefs['ratingspos'] + " of the summary!")
-                                if Prefs['ratingspos'] == "front":
-                                    if Prefs['preserverating']:
-                                        metadata.summary = addratingsstring[3:] + self.unescape(" &#9733;\n\n") + metadata.summary
+
+                                if rating_provider in allowed_ratings or allowed_ratings == '':
+                                    log.debug('adding rating: ' + rating_provider + ': ' + rating_value)
+                                    add_ratings_string = add_ratings_string + ' | ' + rating_provider + ': ' + rating_value
+                                    if add_votes > 0 and rating_votes != "":
+                                        add_ratings_string = add_ratings_string + ' (' + rating_votes + ' votes)'
+                            if add_ratings_string != '':
+                                log.debug('Putting additional ratings at the {position} of the summary!'.format(position=preferences['ratingspos']))
+                                if preferences['ratingspos'] == 'front':
+                                    if preferences['preserverating']:
+                                        metadata.summary = add_ratings_string[3:] + unescape(' &#9733;\n\n') + metadata.summary
                                     else:
-                                        metadata.summary = self.unescape("&#9733; ") + addratingsstring[3:] + self.unescape(" &#9733;\n\n") + metadata.summary
+                                        metadata.summary = unescape('&#9733; ') + add_ratings_string[3:] + unescape(' &#9733;\n\n') + metadata.summary
                                 else:
-                                    metadata.summary = metadata.summary + self.unescape("\n\n&#9733; ") + addratingsstring[3:] + self.unescape(" &#9733;")
+                                    metadata.summary = metadata.summary + unescape('\n\n&#9733; ') + add_ratings_string[3:] + unescape(' &#9733;')
                             else:
-                                self.DLog("Additional ratings empty or malformed!")
-                    if Prefs['preserverating']:
-                        self.DLog("Putting .nfo rating in front of summary!")
-                        metadata.summary = self.unescape(str(Prefs['beforerating'])) + "{:.1f}".format(nforating) + self.unescape(str(Prefs['afterrating'])) + metadata.summary
-                        metadata.rating = nforating
-                    else:
-                        metadata.rating = nforating
+                                log.debug('Additional ratings empty or malformed!')
+
+                if Prefs['preserverating']:
+                    self.DLog("Putting .nfo rating in front of summary!")
+                    metadata.summary = self.unescape(str(Prefs['beforerating'])) + "{:.1f}".format(
+                        nforating) + self.unescape(str(Prefs['afterrating'])) + metadata.summary
+
                 # Genres
                 try:
                     genres = nfoXML.xpath('genre')
@@ -914,57 +1145,156 @@ class xbmcnfotv(Agent.TV_Shows):
                                                 episode.summary = ""
                                                 pass
                                         # Ep. Ratings
+                                        nfo_rating = None
                                         try:
-                                            epnforating = round(float(nfoXML.xpath("rating")[0].text.replace(',', '.')),1)
-                                            episode.rating = epnforating
-                                            self.DLog("Episode Rating found: " + str(epnforating))
+                                            nfo_rating = round(float(nfo_xml.xpath('rating')[0].text.replace(',', '.')), 1)
+                                            log.debug('episode Rating found: ' + str(nfo_rating))
                                         except:
-                                            self.DLog("Cant read rating from episode nfo.")
-                                            epnforating = 0.0
                                             pass
-                                        if Prefs['altratings']:
-                                            self.DLog("Searching for additional episode ratings...")
-                                            allowedratings = Prefs['ratings']
-                                            if not allowedratings: allowedratings = ""
-                                            addepratingsstring = ""
+                                        if not nfo_rating:
+                                            log.debug('Reading old rating style failed. Trying new Krypton style.')
+                                            for ratings in nfo_xml.xpath('ratings'):
+                                                try:
+                                                    rating = ratings.xpath('rating')[0]
+                                                    nfo_rating = round(float(rating.xpath('value')[0].text.replace(',', '.')), 1)
+                                                    log.debug('Krypton style episode rating found: {rating}'.format(rating=nfo_rating))
+                                                except:
+                                                    log.debug('Can\'t read rating from .nfo.')
+                                                    nfo_rating = 0.0
+                                                    pass
+                                        if preferences['altratings']:
+                                            log.debug('Searching for additional Ratings...')
+                                            allowed_ratings = preferences['ratings']
+                                            if not allowed_ratings:
+                                                allowed_ratings = ''
+                                            add_ratings_string = ''
+                                            add_ratings = None
                                             try:
-                                                addepratings = nfoXML.xpath('ratings')
-                                                self.DLog("Additional episode ratings found: " + str(addeprating))
+                                                add_ratings = nfo_xml.xpath('ratings')
+                                                log.debug('Trying to read additional ratings from .nfo.')
                                             except:
-                                                self.DLog("Can't read additional episode ratings from nfo.")
+                                                log.debug('Can\'t read additional ratings from .nfo.')
                                                 pass
-                                            if addepratings:
-                                                for addepratingXML in addepratings:
-                                                    for addeprating in addepratingXML:
+                                            if add_ratings:
+                                                # keep tally of votes so we can choose the top voted rating
+                                                audience_votes = -1
+                                                critic_votes = -1
+
+                                                # average out scores
+                                                audience_score_total = 0.0
+                                                audience_ratings_found = 0
+                                                critic_score_total = 0.0
+                                                critic_ratings_found = 0
+
+                                                # track default='true' attribute
+                                                audience_default_found = False
+                                                critic_default_found = False
+
+                                                for add_rating_xml in add_ratings:
+                                                    for add_rating in add_rating_xml:
+                                                        rating_provider = ""
+                                                        rating_value = ""
+                                                        rating_votes = ""
+
                                                         try:
-                                                            epratingprovider = str(addeprating.attrib['moviedb'])
+                                                            rating_provider = str(add_rating.attrib['moviedb'])
                                                         except:
-                                                            pass
-                                                            self.DLog("Skipping additional episode rating without moviedb attribute!")
-                                                            continue
-                                                        epratingvalue = str(addeprating.text.replace (',','.'))
-                                                        if epratingprovider.lower() in PERCENT_RATINGS:
-                                                            epratingvalue = epratingvalue + "%"
-                                                        if epratingprovider in allowedratings or allowedratings == "":
-                                                            self.DLog("adding episode rating: " + epratingprovider + ": " + epratingvalue)
-                                                            addepratingsstring = addepratingsstring + " | " + epratingprovider + ": " + epratingvalue
-                                                if addratingsstring != "":
-                                                    self.DLog("Putting additional episode ratings at the " + Prefs['ratingspos'] + " of the summary!")
-                                                    if Prefs['ratingspos'] == "front":
-                                                        if Prefs['preserveratingep']:
-                                                            episode.summary = addepratingsstring[3:] + self.unescape(" &#9733;\n\n") + episode.summary
+                                                            try:
+                                                                rating_provider = str(add_rating.attrib['name'])
+                                                                add_rating_value = float(add_rating.xpath('value')[0].text.replace(',', '.'))
+                                                                add_votes = int(add_rating.xpath('votes')[0].text)
+
+                                                                # check for default='true' rating and prefer that instead of averaging out the votes
+                                                                try:
+                                                                    rating_default = (add_rating.attrib['default'].lower() == 'true')
+                                                                except:
+                                                                    rating_default = False
+
+                                                                # check for max attribute and convert to base10
+                                                                try:
+                                                                    rating_max = int(add_rating.attrib['max'])
+                                                                    add_rating_value = float(add_rating_value / rating_max * 10)
+                                                                except:
+                                                                    pass
+
+                                                                if rating_provider in RATINGS:
+                                                                    rating_info = RATINGS[rating_provider]
+
+                                                                    if rating_info['post_process'] == "round_1":
+                                                                        add_rating_value = round(add_rating_value, 1)  # display score in plot as max=10.0
+                                                                        rating_value = str(add_rating_value)
+                                                                    elif rating_info['post_process'] == "int_times_10":  # display score in plot as max=100
+                                                                        add_rating_value = round(add_rating_value, 1)
+                                                                        rating_value = str(int(round(float(add_rating_value * 10), 0)))
+                                                                    else:
+                                                                        rating_value = str(add_rating_value)
+
+                                                                    if rating_info['type'] == 'critic' and add_votes > critic_votes and critic_default_found == False:
+                                                                        critic_ratings_found += 1
+                                                                        critic_score_total += add_rating_value
+
+                                                                        if rating_default == True:  # use default provider for rating
+                                                                            critic_default_found = True
+                                                                        else:  # use average score for rating
+                                                                            add_rating_value = round(float(critic_score_total / critic_ratings_found), 1)
+
+                                                                        if add_rating_value >= rating_info['score_good']:
+                                                                            episode.rating_image = rating_info['image_good']
+                                                                        else:
+                                                                            episode.rating_image = rating_info['image_bad']
+
+                                                                        episode.rating = add_rating_value
+                                                                        episode.rating_count = add_votes
+                                                                    elif rating_info['type'] == 'audience' and add_votes > audience_votes and audience_default_found == False:
+                                                                        audience_ratings_found += 1
+                                                                        audience_score_total += add_rating_value
+
+                                                                        if rating_default == True:  # use default provider for rating
+                                                                            critic_default_found = True
+                                                                        else:  # use average score for rating
+                                                                            add_rating_value = round(float(audience_score_total / audience_ratings_found), 1)
+
+                                                                        if add_rating_value >= rating_info['score_good']:
+                                                                            episode.audience_rating_image = rating_info['image_good']
+                                                                        else:
+                                                                            episode.audience_rating_image = rating_info['image_bad']
+
+                                                                        episode.audience_rating = add_rating_value
+                                                                        episode.rating_count = add_votes  # audience_rating_count doesn't exist
+
+                                                                    rating_value = rating_value + rating_info['append_text_to_score']
+
+                                                                    if rating_info['process_votes'] == True:
+                                                                        rating_votes = str('{:,}'.format(add_votes))
+                                                            except Exception as e:
+                                                                log.debug(e)
+                                                                log.debug("Skipping additional rating without provider attribute!")
+                                                                continue
+
+                                                        if rating_provider in allowed_ratings or allowed_ratings == '':
+                                                            log.debug('adding rating: ' + rating_provider + ': ' + rating_value)
+                                                            add_ratings_string = add_ratings_string + ' | ' + rating_provider + ': ' + rating_value
+                                                            if add_votes > 0 and rating_votes != "":
+                                                                add_ratings_string = add_ratings_string + ' (' + rating_votes + ' votes)'
+                                                    if add_ratings_string != '':
+                                                        log.debug('Putting additional ratings at the {position} of the summary!'.format(position=preferences['ratingspos']))
+                                                        if preferences['ratingspos'] == 'front':
+                                                            if preferences['preserveratingep']:
+                                                                episode.summary = add_ratings_string[3:] + unescape(' &#9733;\n\n') + episode.summary
+                                                            else:
+                                                                episode.summary = unescape('&#9733; ') + add_ratings_string[3:] + unescape(' &#9733;\n\n') + episode.summary
                                                         else:
-                                                            episode.summary = self.unescape("&#9733; ") + addepratingsstring[3:] + self.unescape(" &#9733;\n\n") + episode.summary
+                                                            episode.summary = episode.summary + unescape('\n\n&#9733; ') + add_ratings_string[3:] + unescape(' &#9733;')
                                                     else:
-                                                        episode.summary = episode.summary + self.unescape("\n\n&#9733; ") + addepratingsstring[3:] + self.unescape(" &#9733;")
-                                                else:
-                                                    self.DLog("Additional episode ratings empty or malformed!")
-                                            if Prefs['preserveratingep']:
-                                                self.DLog("Putting Ep .nfo rating in front of summary!")
-                                                episode.summary = self.unescape(str(Prefs['beforeratingep'])) + "{:.1f}".format(epnforating) + self.unescape(str(Prefs['afterratingep'])) + episode.summary
-                                                episode.rating = epnforating
-                                            else:
-                                                episode.rating = epnforating
+                                                        log.debug('Additional ratings empty or malformed!')
+
+                                        if Prefs['preserveratingep']:
+                                            self.DLog("Putting Ep .nfo rating in front of summary!")
+                                            episode.summary = self.unescape(
+                                                str(Prefs['beforeratingep'])) + "{:.1f}".format(
+                                                epnforating) + self.unescape(
+                                                str(Prefs['afterratingep'])) + episode.summary
+
                                         # Ep. Producers / Writers / Guest Stars(Credits)
                                         try:
                                             credit_string = None
