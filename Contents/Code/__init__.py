@@ -18,12 +18,57 @@ import urlparse
 import hashlib
 
 PERCENT_RATINGS = {
-  'rottentomatoes','rotten tomatoes','rt','flixster'
+  'rottentomatoes','rotten tomatoes','rt','flixster','tomatometerallcritics','tomatometeravgcritics','tomatometerallaudience','tomatometeravgaudience'
 }
+
+XML_RATING_TYPE_REPLACEMENTS = {
+        '^(moviedb|tmdb)$':'themoviedb',
+        '^(thetvdb)$':'tvdb',
+        '^(flixter)$':'tomatometerallcritics',
+        '^(rt)$':'tomatometerallcritics',
+}
+
+DEFAULT_RATING_IMAGE = "imdb://image.rating"
+
+XML_RATING_TYPE_TO_PLEX_IMAGE = {
+        'imdb':'imdb://image.rating',
+        'themoviedb':'themoviedb://image.rating',
+        'tomatometerallcritics':'rottentomatoes://image.rating', #.ripe,.rotten
+        'tomatometeravgcritics':'rottentomatoes://image.rating', #.ripe,.rotten
+        'tomatometerallaudience':'rottentomatoes://image.rating', #.upright,.spilled
+        'tomatometeravgaudience':'rottentomatoes://image.rating', #.upright,.spilled
+        'trakt':'', #none exists
+        'tvdb':'thetvdb://image.rating',
+        'tvmaze':'', #non exists
+}
+
+XML_RATING_TYPE_IMAGE_BY_SCORE = { #appends to XML_RATING_TYPE_TO_PLEX_IMAGE value
+        'tomatometerallcritics':[
+            (0.0,0.0,'.empty'),
+            (0.1,59.9,'.rotten'),
+            (60.0,100.0,'.ripe'),
+            ],
+        'tomatometeravgcritics':[
+            (0.0,0.0,'.empty'),
+            (0.1,59.9,'.rotten'),
+            (60.0,100.0,'.ripe'),
+            ],
+        'tomatometerallaudience':[
+            (0.0,0.0,'.empty'),
+            (0.1,59.9,'.spilled'),
+            (60.0,100.0,'.upright'),
+            ],
+        'tomatometeravgaudience':[
+            (0.0,0.0,'.empty'),
+            (0.1,59.9,'.spilled'),
+            (60.0,100.0,'.upright'),
+            ],
+}
+
 
 class xbmcnfotv(Agent.TV_Shows):
 	name = 'XBMCnfoTVImporter'
-	ver = '1.1-93-gc3e9112-220'
+	ver = '1.1-94-gc3e9113-221' #updated by almightiest 2022-06-01
 	primary_provider = True
 	persist_stored_files = False
 	languages = [Locale.Language.NoLanguage]
@@ -121,7 +166,7 @@ class xbmcnfotv(Agent.TV_Shows):
 		# Structure for Frodo, Eden and DLNA
 		searchTuples = []
 		if type == 'show':
-			searchTuples.append(['(show|poster|folder)-?[0-9]?[0-9]?', metadata.posters, imageExts])
+			searchTuples.append(['(show|poster)-?[0-9]?[0-9]?', metadata.posters, imageExts])
 			searchTuples.append(['banner-?[0-9]?[0-9]?', metadata.banners, imageExts])
 			searchTuples.append(['(fanart|art|background|backdrop)-?[0-9]?[0-9]?', metadata.art, imageExts])
 			searchTuples.append(['theme-?[0-9]?[0-9]?', metadata.themes, audioExts])
@@ -193,6 +238,14 @@ class xbmcnfotv(Agent.TV_Shows):
 					mediaList.validate_keys(list(set(validKeys) & set(mediaList.keys())))
 			except Exception, e:
 				Log('Error getting %s %s: %s', type, mediaType, str(e))
+        
+        # TODO: not yet implemented because Plex doesn't support images for TV shows with this scanner
+        def get_rating_image(self, name, rating):
+                #XML_RATING_TYPE_REPLACEMENTS
+                #XML_RATING_TYPE_TO_PLEX_IMAGE
+                #XML_RATING_TYPE_IMAGE_BY_SCORE
+                return DEFAULT_RATING_IMAGE
+
 
 ##### search function #####
 	def search(self, results, media, lang):
@@ -477,18 +530,32 @@ class xbmcnfotv(Agent.TV_Shows):
 				try:
 					nforating = round(float(nfoXML.xpath("rating")[0].text.replace(',', '.')),1)
 					metadata.rating = nforating
+                                        metadata.rating_image = DEFAULT_RATING_IMAGE
+                                        metadata.audience_rating = nforating
+                                        metadata.audience_rating_image = DEFAULT_RATING_IMAGE
+                                        metadata.rating_count = int(nfoXML.xpath("votes")[0].text)
 					self.DLog("Series Rating found: " + str(nforating))
 				except:
 					self.DLog("Can't read rating from tvshow.nfo.")
 					self.DLog("Trying to get a rating of additional ratings from tvshow.nfo.")
-					try:
-						nforating = round(float(nfoXML.xpath("ratings")[0][0][0].text.replace(',', '.')),1)
-						metadata.rating = nforating
+                                        try:
+        					nforating = round(float(nfoXML.xpath("ratings")[0][0][0].text.replace(',', '.')),1)
+                                                nfovotes = int(nfoXML.xpath("ratings")[0][0][1].text)
+	        				metadata.rating = nforating
+                                                metadata.rating_image = DEFAULT_RATING_IMAGE
+                                                metadata.audience_rating = nforating
+                                                metadata.audience_rating_image = DEFAULT_RATING_IMAGE
+                                                metadata.rating_count = nfovotes
 						self.DLog("Found first rating in additional ratings: " + str(nforating))
-					except:
-						self.DLog("Can't read ratings from tvshow.nfo.")
-						nforating = 0.0
-						pass
+
+                                                if 'name' in nfoXML.xpath("ratings")[0][0].attrib:
+                                                        rating_name = str(nfoXML.xpath("ratings")[0][0][0].attrib['name'])
+                                                        metadata.rating_image = xbmcnfotv.get_rating_image(self, rating_name, nforating)
+                                                        metadata.audience_rating_image = xbmcnfotv.get_rating_image(self, rating_name, nforating)
+		        		except:
+			        		self.DLog("Can't read ratings from tvshow.nfo.")
+					        nforating = 0.0
+					        pass
 				if Prefs['altratings']:
 					self.DLog("Searching for additional Ratings...")
 					allowedratings = Prefs['ratings']
@@ -505,20 +572,38 @@ class xbmcnfotv(Agent.TV_Shows):
 							for addrating in addratingXML:
 								try:
 									ratingprovider = str(addrating.attrib['moviedb'])
+                                                                        ratingvalue_float = round(float(addrating.text.replace(', ',',')),1)
+                                                                        ratingvotes_int = 0
 								except:
 									try:
-										ratingprovider = str(addrating.attrib['name'])
-										addrating = addrating[0]
+										ratingdefault = False
+                                                                                
+                                                                                ratingprovider = str(addrating.attrib['name'])
+                                                                                if 'default' in addrating.attrib and str(addrating.attrib['default']).lower() == 'true':
+                                                                                        ratingdefault = True
+										ratingvalue_float = round(float(addrating.xpath('value')[0].text.replace(',', '.')),1)
+                                                                                ratingvotes_int = int(addrating.xpath('votes')[0].text)
 									except:
 										pass
-										self.DLog("Skipping additional rating without provider attribute!")
+										self.DLog("Skipping additional rating without provider 'name' attribute!")
 										continue
-								ratingvalue = str(addrating.text.replace (',','.'))
+								ratingvalue = str(ratingvalue_float)
+                                                                ratingvotes = str('{:,}'.format(ratingvotes_int))
 								if ratingprovider.lower() in PERCENT_RATINGS:
 									ratingvalue = ratingvalue + "%"
 								if ratingprovider in allowedratings or allowedratings == "":
+                                                                        if ratingdefault == True:
+                                                                            self.DLog("Overriding main rating from additional default='true' provider")
+                                                                            metadata.rating = ratingvalue_float
+                                                                            metadata.rating_image = xbmcnfotv.get_rating_image(self, ratingprovider, ratingvalue_float)
+                                                                            metadata.audience_rating = ratingvalue_float
+                                                                            metadata.audience_rating_image = xbmcnfotv.get_rating_image(self, ratingprovider, ratingvalue_float)
+                                                                            metadata.rating_count = ratingvotes_int
+                                                                            #continue #skip adding redundant rating
 									self.DLog("adding rating: " + ratingprovider + ": " + ratingvalue)
 									addratingsstring = addratingsstring + " | " + ratingprovider + ": " + ratingvalue
+                                                                        if ratingvotes_int > 0:
+                                                                            addratingsstring = addratingsstring + " (" + ratingvotes + " votes)"
 							if addratingsstring != "":
 								self.DLog("Putting additional ratings at the " + Prefs['ratingspos'] + " of the summary!")
 								if Prefs['ratingspos'] == "front":
@@ -529,13 +614,13 @@ class xbmcnfotv(Agent.TV_Shows):
 								else:
 									metadata.summary = metadata.summary + self.unescape("\n\n&#9733; ") + addratingsstring[3:] + self.unescape(" &#9733;")
 							else:
+                                                                if ratingdefault:
+                                                                        continue
 								self.DLog("Additional ratings empty or malformed!")
 					if Prefs['preserverating']:
 						self.DLog("Putting .nfo rating in front of summary!")
 						metadata.summary = self.unescape(str(Prefs['beforerating'])) + "{:.1f}".format(nforating) + self.unescape(str(Prefs['afterrating'])) + metadata.summary
-						metadata.rating = nforating
-					else:
-						metadata.rating = nforating
+
 				# Genres
 				try:
 					genres = nfoXML.xpath('genre')
@@ -686,8 +771,10 @@ class xbmcnfotv(Agent.TV_Shows):
 				except: Log("Sort Title: -")
 				try: Log("Original: " + str(metadata.original_title))
 				except: Log("Original: -")
-				try: Log("Rating: " + str(metadata.rating))
-				except: Log("Rating: -")
+				try: Log("Critic Rating: " + str(metadata.rating))
+				except: Log("Critic Rating: -")
+                                try: Log("Audience Rating: " + str(metadata.audience_rating))
+                                except: Log("Audience Rating: -")
 				try: Log("Content: " + str(metadata.content_rating))
 				except: Log("Content: -")
 				try: Log("Network: " + str(metadata.studio))
@@ -917,6 +1004,9 @@ class xbmcnfotv(Agent.TV_Shows):
 										try:
 											epnforating = round(float(nfoXML.xpath("rating")[0].text.replace(',', '.')),1)
 											episode.rating = epnforating
+                                                                                        #episode.rating_image = DEFAULT_RATING_IMAGE
+                                                                                        #epnfovotes = int(nfoXML.xpath("votes")[0].text)
+                                                                                        #episode.rating_count = epnfovotes
 											self.DLog("Episode Rating found: " + str(epnforating))
 										except:
 											self.DLog("Cant read rating from episode nfo.")
@@ -929,7 +1019,7 @@ class xbmcnfotv(Agent.TV_Shows):
 											addepratingsstring = ""
 											try:
 												addepratings = nfoXML.xpath('ratings')
-												self.DLog("Additional episode ratings found: " + str(addeprating))
+												self.DLog("Additional episode ratings found: " + str(addepratings))
 											except:
 												self.DLog("Can't read additional episode ratings from nfo.")
 												pass
@@ -939,16 +1029,24 @@ class xbmcnfotv(Agent.TV_Shows):
 														try:
 															epratingprovider = str(addeprating.attrib['moviedb'])
 														except:
-															pass
-															self.DLog("Skipping additional episode rating without moviedb attribute!")
-															continue
-														epratingvalue = str(addeprating.text.replace (',','.'))
+                                                                                                                        try:
+                                                                                                                                epratingprovider = str(addeprating.attrib['name'])
+                                                                                                                                addeprating_score = round(float(addeprating.xpath('value')[0].text.replace (',','.')),1)
+                                                                                                                                addepvotes_int = int(addeprating.xpath('votes')[0].text)
+                                                                                                                        except:
+															        pass
+															        self.DLog("Skipping additional episode rating without 'moviedb' or 'name' attribute!")
+															        continue
+														epratingvalue = str(addeprating_score)
+                                                                                                                epratingvotes = str('{:,}'.format(addepvotes_int))
 														if epratingprovider.lower() in PERCENT_RATINGS:
 															epratingvalue = epratingvalue + "%"
 														if epratingprovider in allowedratings or allowedratings == "":
 															self.DLog("adding episode rating: " + epratingprovider + ": " + epratingvalue)
 															addepratingsstring = addepratingsstring + " | " + epratingprovider + ": " + epratingvalue
-												if addratingsstring != "":
+                                                                                                                        if addepvotes_int > 0:
+                                                                                                                                addepratingsstring = addepratingsstring + " (" + epratingvotes + " votes)"
+												if addepratingsstring != "":
 													self.DLog("Putting additional episode ratings at the " + Prefs['ratingspos'] + " of the summary!")
 													if Prefs['ratingspos'] == "front":
 														if Prefs['preserveratingep']:
@@ -962,9 +1060,8 @@ class xbmcnfotv(Agent.TV_Shows):
 											if Prefs['preserveratingep']:
 												self.DLog("Putting Ep .nfo rating in front of summary!")
 												episode.summary = self.unescape(str(Prefs['beforeratingep'])) + "{:.1f}".format(epnforating) + self.unescape(str(Prefs['afterratingep'])) + episode.summary
-												episode.rating = epnforating
-											else:
-												episode.rating = epnforating
+											
+                                                                                        #episode.rating = epnforating
 										# Ep. Producers / Writers / Guest Stars(Credits)
 										try:
 											credit_string = None
@@ -1061,6 +1158,8 @@ class xbmcnfotv(Agent.TV_Shows):
 										Log("---------------------")
 										Log("Episode (S"+season_num.zfill(2)+"E"+ep_num.zfill(2)+") nfo Information")
 										Log("---------------------")
+                                                                                try: Log("ID: " + str(episode.guid))
+                                                                                except: Log("ID: -")
 										try: Log("Title: " + str(episode.title))
 										except: Log("Title: -")
 										try: Log("Content: " + str(episode.content_rating))
