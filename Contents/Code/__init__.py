@@ -11,6 +11,7 @@
 # Krypton ratings fix by F4RHaD
 # Season banner and season art support by Christian
 #
+# Updated by almightiest
 import os, re, time, datetime, platform, traceback, glob, re, htmlentitydefs
 from dateutil.parser import parse
 import urllib
