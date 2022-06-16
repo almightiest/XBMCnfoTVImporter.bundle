@@ -229,10 +229,10 @@ class xbmcnfotv(Agent.TV_Shows):
                             mediaList[mediaHash] = Proxy.Media(data, sort_order = sortIndex)
                             Log('Found season poster image at ' + filePath)
                         else:
-                            Log('Skipping file %s file because it already exists.', filePath)
+                            self.DLog('Skipping file %s file because it already exists.', filePath)
                         sortIndex += 1
 
-            Log('Found %d valid things for structure %s (ext: %s)', len(validKeys), structure, str(exts))
+            self.DLog('Found %d valid things for structure %s (ext: %s)', len(validKeys), structure, str(exts))
             validKeys = [value for value in mediaList.keys() if value in validKeys]
             mediaList.validate_keys(validKeys)
 
@@ -243,9 +243,9 @@ class xbmcnfotv(Agent.TV_Shows):
         if type == 'show':
             searchTuples.append(['music', metadata.themes, 'theme'])
 
-        Log('Search %s posters and banners from url', type)
+        self.DLog('Search %s posters and banners from url', type)
         for mediaType, mediaList, tag in searchTuples:
-            Log('Search %s %s form url', type, mediaType)
+            self.DLog('Search %s %s form url', type, mediaType)
             try:
                 if tag == 'fanart':
                     nfoXMLAsset = nfoXML.xpath(tag)[0][0]
@@ -258,17 +258,17 @@ class xbmcnfotv(Agent.TV_Shows):
                         if type == 'season' and metadata.index != int(asset.attrib.get('season')):
                             continue
                         if tag != 'thumb' or str(asset.attrib.get('aspect')) == mediaType:
-                            Log('Trying to get ' + mediaType)
+                            self.DLog('Trying to get ' + mediaType)
                             try:
                                 mediaList[asset.text] = Proxy.Media(HTTP.Request(asset.getparent().attrib.get('url', '') + asset.text))
                                 validKeys.append(asset.text)
                                 Log('Found %s %s at %s', type, mediaType, asset.text)
                             except Exception, e:
-                                Log('Error getting %s at %s: %s', mediaType, asset.text, str(e))
+                                self.DLog('Error getting %s at %s: %s', mediaType, asset.text, str(e))
 
                     mediaList.validate_keys(list(set(validKeys) & set(mediaList.keys())))
             except Exception, e:
-                Log('Error getting %s %s: %s', type, mediaType, str(e))
+                self.DLog('Error getting %s %s: %s', type, mediaType, str(e))
 
     ##### search function #####
     def search(self, results, media, lang):
@@ -398,7 +398,7 @@ class xbmcnfotv(Agent.TV_Shows):
         id = media.id
         duration_key = 'duration_'+id
         Dict[duration_key] = [0] * 200
-        Log('Update called for TV Show with id = ' + id)
+        self.DLog('Update called for TV Show with id = ' + id)
         path1 = None
         try:
             pageUrl = "http://127.0.0.1:32400/library/metadata/" + id + "/tree"
@@ -778,15 +778,15 @@ class xbmcnfotv(Agent.TV_Shows):
                 # Show assets
                 if not Prefs['localmediaagent']:
                     if Prefs['assetslocation'] == 'local':
-                        Log("Looking for show assets for %s from local", metadata.title)
+                        self.DLog("Looking for show assets for %s from local", metadata.title)
                         try: self.AssetsLocal(metadata, [path], 'show')
                         except Exception, e:
-                            Log('Error finding show assets for %s from local: %s', metadata.title, str(e))
+                            self.DLog('Error finding show assets for %s from local: %s', metadata.title, str(e))
                     else:
-                        Log("Looking for show assets for %s from url", metadata.title)
+                        self.DLog("Looking for show assets for %s from url", metadata.title)
                         try: self.AssetsLink(nfoXML, metadata, 'show')
                         except Exception, e:
-                            Log('Error finding show assets for %s from url: %s', metadata.title, str(e))
+                            self.DLog('Error finding show assets for %s from url: %s', metadata.title, str(e))
 
                 # Actors
                 rroles = []
@@ -870,34 +870,35 @@ class xbmcnfotv(Agent.TV_Shows):
                 except: Log("ID: -")
                 try: Log("Title: " + str(metadata.title))
                 except: Log("Title: -")
-                try: Log("Sort Title: " + str(metadata.title_sort))
-                except: Log("Sort Title: -")
-                try: Log("Original: " + str(metadata.original_title))
-                except: Log("Original: -")
-                try: Log("Rating: " + str(metadata.rating))
-                except: Log("Rating: -")
-                try: Log("Content: " + str(metadata.content_rating))
-                except: Log("Content: -")
-                try: Log("Network: " + str(metadata.studio))
-                except: Log("Network: -")
-                try: Log("Premiere: " + str(metadata.originally_available_at))
-                except: Log("Premiere: -")
-                try: Log("Tagline: " + str(metadata.tagline))
-                except: Log("Tagline: -")
-                try: Log("Summary: " + str(metadata.summary))
-                except: Log("Summary: -")
-                Log("Genres:")
-                try: [Log("\t" + genre) for genre in metadata.genres]
-                except: Log("\t-")
-                Log("Collections:")
-                try: [Log("\t" + collection) for collection in metadata.collections]
-                except: Log("\t-")
-                try: Log("Duration: " + str(metadata.duration // 60000) + ' min')
-                except: Log("Duration: -")
-                Log("Actors:")
-                try: [Log("\t" + actor.name + " > " + actor.role) for actor in metadata.roles]
-                except: [Log("\t" + actor.name) for actor in metadata.roles]
-                except: Log("\t-")
+                try: self.DLog("Sort Title: " + str(metadata.title_sort))
+                except: self.DLog("Sort Title: -")
+                try: self.DLog("Original: " + str(metadata.original_title))
+                except: self.DLog("Original: -")
+                try: Log("Critic Rating: " + str(metadata.rating))
+                except: Log("Critic Rating: -")
+                try: Log("Audience Rating: " + str(metadata.audience_rating))
+                except: Log("Audience Rating: -")
+                try: self.DLog("Content: " + str(metadata.content_rating))
+                except: self.DLog("Content: -")
+                try: self.DLog("Network: " + str(metadata.studio))
+                except: self.DLog("Network: -")
+                try: self.DLog("Premiere: " + str(metadata.originally_available_at))
+                except: self.DLog("Premiere: -")
+                try: self.DLog("Tagline: " + str(metadata.tagline))
+                except: self.DLog("Tagline: -")
+                try: self.DLog("Summary: " + str(metadata.summary))
+                except: self.DLog("Summary: -")
+                self.DLog("Genres:")
+                try: [self.DLog("\t" + genre) for genre in metadata.genres]
+                except: self.DLog("\t-")
+                self.DLog("Collections:")
+                try: [self.DLog("\t" + collection) for collection in metadata.collections]
+                except: self.DLog("\t-")
+                try: self.DLog("Duration: " + str(metadata.duration // 60000) + ' min')
+                except: self.DLog("Duration: -")
+                self.DLog("Actors:")
+                try: [self.DLog("\t" + actor.name + " > " + actor.role) for actor in metadata.roles]
+                except: [self.DLog("\t" + actor.name) for actor in metadata.roles]
                 Log("---------------------")
 
         # Grabs the season data
@@ -930,13 +931,13 @@ class xbmcnfotv(Agent.TV_Shows):
 
                     if not Prefs['localmediaagent']:
                         if Prefs['assetslocation'] == 'local':
-                            Log('Looking for season assets for %s season %s.', metadata.title, season_num)
+                            self.DLog('Looking for season assets for %s season %s.', metadata.title, season_num)
                             try: self.AssetsLocal(metadata.seasons[season_num], [path, seasonPath], 'season')
-                            except Exception, e: Log("Error finding season assets for %s season %s: %s", metadata.title, season_num, str(e))
+                            except Exception, e: self.DLog("Error finding season assets for %s season %s: %s", metadata.title, season_num, str(e))
                         else:
-                            Log('Looking for season assets for %s season %s from url', metadata.title, season_num)
+                            self.DLog('Looking for season assets for %s season %s from url', metadata.title, season_num)
                             try: self.AssetsLink(nfoXML, metadata.seasons[season_num], 'season')
-                            except Exception, e: Log('Error finding season assets for %s season %s from url: %s', metadata.title, season_num, str(e))
+                            except Exception, e: self.DLog('Error finding season assets for %s season %s from url: %s', metadata.title, season_num, str(e))
 
                     episodeXML = []
                     epnumber = 0
@@ -1137,12 +1138,11 @@ class xbmcnfotv(Agent.TV_Shows):
                                                 pass
                                             if add_ratings:
                                                 # keep tally of votes so we can choose the top voted rating
-                                                audience_votes = -1
-                                                critic_votes = -1
+                                                tally_votes = -1
 
                                                 # average out scores
-                                                audience_score_total = 0.0
-                                                audience_ratings_found = 0
+                                                score_total = 0.0
+                                                ratings_found = 0
                                                 critic_score_total = 0.0
                                                 critic_ratings_found = 0
 
@@ -1329,46 +1329,44 @@ class xbmcnfotv(Agent.TV_Shows):
                                             episodeMedia = media.seasons[season_num].episodes[ep_num].items[0]
                                             path = os.path.dirname(episodeMedia.parts[0].file)
                                             if Prefs['assetslocation'] == 'local':
-                                                Log('Looking for episode assets %s for %s season %s.', ep_num, metadata.title, season_num)
+                                                self.DLog('Looking for episode assets %s for %s season %s.', ep_num, metadata.title, season_num)
                                                 try: self.AssetsLocal(episode, [path], 'episode', episodeMedia.parts, multEpisode)
-                                                except Exception, e: Log('Error finding episode assets %s for %s season %s: %s', ep_num, metadata.title, season_num,str(e))
+                                                except Exception, e: self.DLog('Error finding episode assets %s for %s season %s: %s', ep_num, metadata.title, season_num,str(e))
                                             else:
-                                                Log('Looking for episode assets for %s season %s from url', metadata.title, season_num)
+                                                self.DLog('Looking for episode assets for %s season %s from url', metadata.title, season_num)
                                                 try:
                                                     thumb = nfoXML.xpath('thumb')[0]
-                                                    Log('Trying to get thumbnail for episode %s for %s season %s from url.', ep_num,  metadata.title, season_num)
+                                                    self.DLog('Trying to get thumbnail for episode %s for %s season %s from url.', ep_num,  metadata.title, season_num)
                                                     try:
                                                         episode.thumbs[thumb.text] = Proxy.Media(HTTP.Request(thumb.text))
                                                         episode.thumbs.validate_keys([thumb.text])
                                                         Log('Found episode thumbnail from url')
                                                     except Exception as e:
-                                                        Log('Error download episode thumbnail %s for %s season %s from url: %s', ep_num,  metadata.title, season_num, str(e))
+                                                        self.DLog('Error download episode thumbnail %s for %s season %s from url: %s', ep_num,  metadata.title, season_num, str(e))
                                                 except Exception, e:
-                                                    Log('Error finding episode thumbnail %s for %s season %s from url: %s', ep_num,  metadata.title, season_num, str(e))
+                                                    self.DLog('Error finding episode thumbnail %s for %s season %s from url: %s', ep_num,  metadata.title, season_num, str(e))
 
                                         Log("---------------------")
                                         Log("Episode (S"+season_num.zfill(2)+"E"+ep_num.zfill(2)+") nfo Information")
                                         Log("---------------------")
                                         try: Log("Title: " + str(episode.title))
                                         except: Log("Title: -")
-                                        try: Log("Content: " + str(episode.content_rating))
-                                        except: Log("Content: -")
-                                        try: Log("Critic Rating: " + str(episode.rating))
-                                        except: Log("Critic Rating: -")
-                                        try: Log("Audience Rating: " + str(episode.audience_rating))
-                                        except: Log("Audience Rating: -")
-                                        try: Log("Premiere: " + str(episode.originally_available_at))
-                                        except: Log("Premiere: -")
-                                        try: Log("Summary: " + str(episode.summary))
-                                        except: Log("Summary: -")
-                                        Log("Writers:")
-                                        try: [Log("\t" + writer.name) for writer in episode.writers]
-                                        except: Log("\t-")
-                                        Log("Directors:")
-                                        try: [Log("\t" + director.name) for director in episode.directors]
-                                        except: Log("\t-")
-                                        try: Log("Duration: " + str(episode.duration // 60000) + ' min')
-                                        except: Log("Duration: -")
+                                        try: self.DLog("Content: " + str(episode.content_rating))
+                                        except: self.DLog("Content: -")
+                                        try: self.DLog("Critic Rating: " + str(episode.rating))
+                                        except: self.DLog("Critic Rating: -")
+                                        try: self.DLog("Premiere: " + str(episode.originally_available_at))
+                                        except: self.DLog("Premiere: -")
+                                        try: self.DLog("Summary: " + str(episode.summary))
+                                        except: self.DLog("Summary: -")
+                                        self.DLog("Writers:")
+                                        try: [self.DLog("\t" + writer.name) for writer in episode.writers]
+                                        except: self.DLog("\t-")
+                                        self.DLog("Directors:")
+                                        try: [self.DLog("\t" + director.name) for director in episode.directors]
+                                        except: self.DLog("\t-")
+                                        try: self.DLog("Duration: " + str(episode.duration // 60000) + ' min')
+                                        except: self.DLog("Duration: -")
                                         Log("---------------------")
                                     else:
                                         Log("ERROR: <episodedetails> tag not found in episode NFO file " + nfoFile)
